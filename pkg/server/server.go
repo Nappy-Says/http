@@ -12,24 +12,21 @@ import (
 )
 
 type HandlerFunc func(req *Request)
-
-var (
-	ErrBadRequest = errors.New("Bad Request")
-	ErrHTTPVersionNotValid = errors.New("Http version not valid")
-)
-
 type Server struct {
 	addr     string
 	mu       sync.RWMutex
-	handlers map[string]HandlerFunc
-}
+	handlers map[string]HandlerFunc}
 type Request struct {
 	Conn        net.Conn
 	QueryParams url.Values
 	PathParams  map[string]string
 	Headers     map[string]string
-	Body        []byte
-}
+	Body        []byte}
+
+var (
+	ErrBadRequest = errors.New("Bad Request")
+	ErrHTTPVersionNotValid = errors.New("Http version not valid"))
+
 func NewServer(addr string) *Server {
 	return &Server{addr: addr, handlers: make(map[string]HandlerFunc)}
 }
@@ -57,7 +54,9 @@ func (s *Server) Start() (err error) {
 		if err != nil {
 			continue
 		}
+
 		go s.handle(conn)
+
 	}
 }
 
@@ -82,6 +81,7 @@ func (s *Server) handle(conn net.Conn) {
 			log.Printf("Bad Request")
 			return
 		}
+
 		hLD := []byte{'\r', '\n', '\r', '\n'}
 		hLE := bytes.Index(data, hLD)
 		if rLE == -1 {
@@ -130,9 +130,7 @@ func (s *Server) handle(conn net.Conn) {
 
 		req.Conn = conn
 		req.QueryParams = uri.Query()
-
 		var handler = func(req *Request) { conn.Close() }
-
 		s.mu.RLock()
 		pParam, hr := s.checkPath(uri.Path)
 		if hr != nil {
@@ -141,9 +139,7 @@ func (s *Server) handle(conn net.Conn) {
 		}
 		s.mu.RUnlock()
 		handler(&req)
-
 	}
-
 }
 
 func (s *Server) checkPath(path string) (map[string]string, HandlerFunc) {
