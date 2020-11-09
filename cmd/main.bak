@@ -15,7 +15,7 @@ func main() {
 func execute(host, port string) (err error) {
 	srv := server.NewServer(net.JoinHostPort(host, port))
 	srv.Register("/", srv.RouteHandler("Welcome"))
-	srv.Register("/about", srv.RouteHandler("Copyright ©"))
+	srv.Register("/about", srv.RouteHandler("Copyright ©))
 	srv.Register("/payments", srv.RouteHandler("money_cassh"))
 	return srv.Start()
 }
