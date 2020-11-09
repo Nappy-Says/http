@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"net/url"
 	"strconv"
 	"strings"
 	"sync"
@@ -15,7 +16,12 @@ const (
 	PORT = "9999"
 )
 
-type HandlerFunc func(conn net.Conn)
+type Request struct {
+	Conn        net.Conn
+	QueryParams url.Values
+}
+
+type HandlerFunc func(req *Request)
 
 type Server struct {
 	addr     string
@@ -28,10 +34,7 @@ func NewServer(add string) *Server {
 		addr:     add,
 		handlers: make(map[string]HandlerFunc),
 	}
-
-
 }
-
 
 func (s *Server) Register(path string, handler HandlerFunc) {
 	s.mu.Lock()
@@ -52,19 +55,21 @@ func (s *Server) Start() error {
 			log.Println(err)
 			continue
 		}
-		go s.handle(conn)
+		go s.handle(Request{
+			Conn: conn,
+		})
 	}
 }
 
-func (s *Server) handle(conn net.Conn) {
+func (s *Server) handle(req Request) {
 	defer func() {
-		if closeErr := conn.Close(); closeErr != nil {
+		if closeErr := req.Conn.Close(); closeErr != nil {
 			log.Println(closeErr)
 		}
 	}()
 
 	buf := make([]byte, 4096)
-	n, err := conn.Read(buf)
+	n, err := req.Conn.Read(buf)
 	if err == io.EOF {
 		log.Printf("%s", buf[:n])
 	}
@@ -82,17 +87,28 @@ func (s *Server) handle(conn net.Conn) {
 		log.Print("partsErr: ", parts)
 	}
 
+	path := parts[1]
+	if strings.Contains(path, "payments") {
+		uri, err := url.ParseRequestURI(path)
+		if err != nil {
+			log.Println("url query parse err: ", err)
+		}
+		req.QueryParams = uri.Query()
+		log.Println(req.QueryParams["id"])
+		path = uri.Path
+	}
+
 	s.mu.RLock()
-	if handler, ok := s.handlers[parts[1]]; ok {
+	if handler, ok := s.handlers[path]; ok {
 		s.mu.RUnlock()
-		handler(conn)
+		handler(&req)
 	}
 	return
 }
 
-func (s *Server) RouteHandler(body string) func(conn net.Conn) {
-	return func(conn net.Conn) {
-		_, err := conn.Write([]byte(s.Response(body)))
+func (s *Server) RouteHandler(body string) func(req *Request) {
+	return func(req *Request) {
+		_, err := req.Conn.Write([]byte(s.Response(body)))
 		if err != nil {
 			log.Print(err)
 		}
