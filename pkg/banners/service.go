@@ -3,6 +3,7 @@ package banners
 import (
 	"context"
 	"errors"
+	"sort"
 	"sync"
 )
 
@@ -12,20 +13,27 @@ type Banner struct {
 	Content string
 	Button  string
 	Link    string
-	Image   string
 }
+
 type Service struct {
 	mu    sync.RWMutex
 	items []*Banner
 }
+
+//NewService construct
 func NewService() *Service {
 	return &Service{items: make([]*Banner, 0)}
 }
+
 func (s *Service) All(ctx context.Context) ([]*Banner, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
+	if len(s.items) <= 0 {
+		return nil, errors.New("banner not found")
+	}
 	return s.items, nil
 }
+
 func (s *Service) ByID(ctx context.Context, id int64) (*Banner, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -34,26 +42,36 @@ func (s *Service) ByID(ctx context.Context, id int64) (*Banner, error) {
 			return banner, nil
 		}
 	}
-	return nil, errors.New("banner by id not found")
+	return nil, errors.New("banner not found")
 }
-var starID int64 = 0
+
 func (s *Service) Save(ctx context.Context, item *Banner) (*Banner, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	if item.ID == 0 {
-		starID++
-		item.ID = starID
+		sort.Slice(s.items[:], func(i, j int) bool {
+			return s.items[i].ID > s.items[j].ID
+		})
+		item.ID = s.items[0].ID + 1
 		s.items = append(s.items, item)
 		return item, nil
-	}
-	for i, banner := range s.items {
-		if banner.ID == item.ID {
-			s.items[i] = item
-			return item, nil
+	} else {
+		for _, banner := range s.items {
+			if banner.ID == item.ID {
+				break
+			}
+			banner = &Banner{
+				Title:   item.Title,
+				Content: item.Content,
+				Button:  item.Button,
+				Link:    item.Link,
+			}
+			return banner, nil
 		}
 	}
-	return nil, errors.New("banner save error")
+	return nil, errors.New("banner not found")
 }
+
 func (s *Service) RemoveByID(ctx context.Context, id int64) (*Banner, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -63,5 +81,5 @@ func (s *Service) RemoveByID(ctx context.Context, id int64) (*Banner, error) {
 			return banner, nil
 		}
 	}
-	return nil, errors.New("banner remove by id not found")
+	return nil, errors.New("banner not found")
 }
