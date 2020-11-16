@@ -2,33 +2,32 @@ package server
 
 import (
 	"bytes"
-	"errors"
 	"io"
 	"log"
 	"net"
 	"net/url"
+	"strconv"
 	"strings"
-	"sync"
-)
+	"sync")
 
+const (
+	HOST = "0.0.0.0"
+	PORT = "9999")
+type Request struct {
+	Conn        net.Conn
+	QueryParams url.Values
+	PathParams  map[string]string}
 type HandlerFunc func(req *Request)
 type Server struct {
 	addr     string
 	mu       sync.RWMutex
 	handlers map[string]HandlerFunc}
-type Request struct {
-	Conn        net.Conn
-	QueryParams url.Values
-	PathParams  map[string]string
-	Headers     map[string]string
-	Body        []byte}
 
-var (
-	ErrBadRequest = errors.New("Bad Request")
-	ErrHTTPVersionNotValid = errors.New("Http version not valid"))
-
-func NewServer(addr string) *Server {
-	return &Server{addr: addr, handlers: make(map[string]HandlerFunc)}
+func NewServer(add string) *Server {
+	return &Server{
+		addr:     add,
+		handlers: make(map[string]HandlerFunc),
+	}
 }
 
 func (s *Server) Register(path string, handler HandlerFunc) {
@@ -37,156 +36,98 @@ func (s *Server) Register(path string, handler HandlerFunc) {
 	s.handlers[path] = handler
 }
 
-func (s *Server) Start() (err error) {
-	listener, err := net.Listen("tcp", s.addr)
+func (s *Server) Start() error {
+	listner, err := net.Listen("tcp", s.addr)
 	if err != nil {
-		log.Println(err)
+		log.Print(err)
 		return err
 	}
-	defer func() {
-		if cerr := listener.Close(); cerr != nil {
-			err = cerr
-			return
-		}
-	}()
+
 	for {
-		conn, err := listener.Accept()
+		conn, err := listner.Accept()
 		if err != nil {
+			log.Println(err)
 			continue
 		}
-
-		go s.handle(conn)
-
+		go s.handle(Request{
+			Conn: conn,
+		})
 	}
 }
 
-func (s *Server) handle(conn net.Conn) {
-	defer conn.Close()
-	buf := make([]byte, (1024 * 8))
-	for {
-		n, err := conn.Read(buf)
-		if err == io.EOF {
-			log.Printf("%s", buf[:n])
+func (s *Server) handle(req Request) {
+	defer func() {
+		if closeErr := req.Conn.Close(); closeErr != nil {
+			log.Println(closeErr)
 		}
+	}()
+
+	buf := make([]byte, 4096)
+	n, err := req.Conn.Read(buf)
+	if err == io.EOF {
+		log.Printf("%s", buf[:n])
+	}
+
+	data := buf[:n]
+	requestLineDelim := []byte{'\r', '\n'}
+	requestLineEnd := bytes.Index(data, requestLineDelim)
+	if requestLineEnd == -1 {
+		log.Print("requestLineEndErr: ", requestLineEnd)
+	}
+
+	requestLine := string(data[:requestLineEnd])
+	parts := strings.Split(requestLine, " ")
+	if len(parts) != 3 {
+		log.Print("partsErr: ", parts)
+	}
+
+	path := parts[1]
+	if strings.Contains(path, "payments") {
+		uri, err := url.ParseRequestURI(path)
 		if err != nil {
-			log.Println(err)
-			return
+			log.Println("url query parse err: ", err)
 		}
 
-		var req Request
-		data := buf[:n]
-		rLD := []byte{'\r', '\n'}
-		rLE := bytes.Index(data, rLD)
-		if rLE == -1 {
-			log.Printf("Bad Request")
-			return
+		if uri.RawQuery != "" {
+			req.QueryParams = uri.Query()
+			log.Println(req.QueryParams["id"])
+			_, err = req.Conn.Write([]byte(s.Response("ID: " + req.QueryParams["id"][0])))
+		} else {
+			split := strings.Split(uri.Path, "/payments/")
+			m := make(map[string]string)
+			m["id"] = split[1]
+			req.PathParams = m
+			log.Println(req.PathParams["id"])
+			_, err = req.Conn.Write([]byte(s.Response("ID: " + req.PathParams["id"])))
 		}
 
-		hLD := []byte{'\r', '\n', '\r', '\n'}
-		hLE := bytes.Index(data, hLD)
-		if rLE == -1 {
-			return
-		}
+		path = uri.Path
+	}
+	if err != nil {
+		log.Print(err)
+	}
 
-		headersLine := string(data[rLE:hLE])
-		headers := strings.Split(headersLine, "\r\n")[1:]
-		mp := make(map[string]string)
-		for _, v := range headers {
-			headerLine := strings.Split(v, ": ")
-			mp[headerLine[0]] = headerLine[1]
-		}
-
-		req.Headers = mp
-
-		b := string(data[hLE:])
-		b = strings.Trim(b, "\r\n")
-
-		req.Body = []byte(b)
-
-		reqLine := string(data[:rLE])
-		parts := strings.Split(reqLine, " ")
-
-		if len(parts) != 3 {
-			log.Println(ErrBadRequest)
-			return
-		}
-		path, version := parts[1], parts[2]
-		if version != "HTTP/1.1" {
-			log.Println(ErrHTTPVersionNotValid)
-			return
-		}
-
-		decode, err := url.PathUnescape(path)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-
-		uri, err := url.ParseRequestURI(decode)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-
-		req.Conn = conn
-		req.QueryParams = uri.Query()
-		var handler = func(req *Request) { conn.Close() }
-		s.mu.RLock()
-		pParam, hr := s.checkPath(uri.Path)
-		if hr != nil {
-			handler = hr
-			req.PathParams = pParam
-		}
+	s.mu.RLock()
+	if handler, ok := s.handlers[path]; ok {
 		s.mu.RUnlock()
 		handler(&req)
 	}
+	return
 }
 
-func (s *Server) checkPath(path string) (map[string]string, HandlerFunc) {
-
-	strRoutes := make([]string, len(s.handlers))
-	i := 0
-	for k := range s.handlers {
-		strRoutes[i] = k
-		i++
-	}
-
-	mp := make(map[string]string)
-
-	for i := 0; i < len(strRoutes); i++ {
-		flag := false
-		route := strRoutes[i]
-		partsRoute := strings.Split(route, "/")
-		pRotes := strings.Split(path, "/")
-
-		for j, v := range partsRoute {
-			if v != "" {
-				f := v[0:1]
-				l := v[len(v)-1:]
-				if f == "{" && l == "}" {
-					mp[v[1:len(v)-1]] = pRotes[j]
-					flag = true
-				} else if pRotes[j] != v {
-
-					strs := strings.Split(v, "{")
-					if len(strs) > 0 {
-						key := strs[1][:len(strs[1])-1]
-						mp[key] = pRotes[j][len(strs[0]):]
-						flag = true
-					} else {
-						flag = false
-						break
-					}
-				}
-				flag = true
-			}
-		}
-		if flag {
-			if hr, found := s.handlers[route]; found {
-				return mp, hr
-			}
-			break
+func (s *Server) RouteHandler(body string) func(req *Request) {
+	return func(req *Request) {
+		_, err := req.Conn.Write([]byte(s.Response(body)))
+		if err != nil {
+			log.Print(err)
 		}
 	}
-	return nil, nil
+}
+
+func (s *Server) Response(body string) string {
+	return "HTTP/1.1 200 OK\r\n" +
+		"Content-Length: " + strconv.Itoa(len(body)) + "\r\n" +
+		"Content-Type: text/html\r\n" +
+		"Connection: close\r\n" +
+		"\r\n" + body
 }
