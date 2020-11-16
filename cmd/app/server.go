@@ -5,7 +5,8 @@ import (
 	"github.com/Nappy-Says/http/pkg/banners"
 	"log"
 	"net/http"
-	"strconv")
+	"strconv"
+)
 
 type Server struct {
 	mux        *http.ServeMux

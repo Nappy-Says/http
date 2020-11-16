@@ -3,7 +3,8 @@ package banners
 import (
 	"context"
 	"errors"
-	"sync")
+	"sync"
+)
 
 type Banner struct {
 	ID      int64
@@ -16,9 +17,6 @@ type Service struct {
 	mu    sync.RWMutex
 	items []*Banner
 }
-
-var starID int64 = 0
-
 func NewService() *Service {
 	return &Service{items: make([]*Banner, 0)}
 }
@@ -37,7 +35,7 @@ func (s *Service) ByID(ctx context.Context, id int64) (*Banner, error) {
 	}
 	return nil, errors.New("banner by id not found")
 }
-
+var starID int64 = 0
 func (s *Service) Save(ctx context.Context, item *Banner) (*Banner, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

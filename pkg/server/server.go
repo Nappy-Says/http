@@ -22,7 +22,6 @@ type Server struct {
 	addr     string
 	mu       sync.RWMutex
 	handlers map[string]HandlerFunc}
-
 func NewServer(add string) *Server {
 	return &Server{
 		addr:     add,
