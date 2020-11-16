@@ -12,6 +12,7 @@ type Banner struct {
 	Content string
 	Button  string
 	Link    string
+	Image   string
 }
 type Service struct {
 	mu    sync.RWMutex

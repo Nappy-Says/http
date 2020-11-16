@@ -8,7 +8,8 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-	"sync")
+	"sync"
+)
 
 const (
 	HOST = "0.0.0.0"

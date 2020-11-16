@@ -5,7 +5,8 @@ import (
 	"github.com/Nappy-Says/http/pkg/banners"
 	"net"
 	"net/http"
-	"os")
+	"os"
+)
 
 const (
 	HOST = "0.0.0.0"
