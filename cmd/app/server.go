@@ -2,26 +2,21 @@ package app
 
 import (
 	"encoding/json"
-	"github.com/bdaler/http/pkg/banners"
+	"github.com/Nappy-Says/http/pkg/banners"
 	"log"
 	"net/http"
-	"strconv"
-)
+	"strconv")
 
 type Server struct {
 	mux        *http.ServeMux
 	bannersSvc *banners.Service
 }
-
-//NewServer construct
 func NewServer(mux *http.ServeMux, bannersSvc *banners.Service) *Server {
 	return &Server{mux: mux, bannersSvc: bannersSvc}
 }
-
 func (s *Server) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	s.mux.ServeHTTP(writer, request)
 }
-
 func (s *Server) Init() {
 	log.Println("Init method")
 	s.mux.HandleFunc("/banners.getAll", s.handleGetAllBanners)
@@ -29,7 +24,6 @@ func (s *Server) Init() {
 	s.mux.HandleFunc("/banners.save", s.handleSaveBanner)
 	s.mux.HandleFunc("/banners.removeById", s.handleRemoveById)
 }
-
 func (s *Server) handleGetAllBanners(writer http.ResponseWriter, request *http.Request) {
 	items, err := s.bannersSvc.All(request.Context())
 	requestError(writer, err, http.StatusInternalServerError)
@@ -39,7 +33,6 @@ func (s *Server) handleGetAllBanners(writer http.ResponseWriter, request *http.R
 
 	jsonResponse(writer, data)
 }
-
 func (s *Server) handleGetBannerById(writer http.ResponseWriter, request *http.Request) {
 	idParam := request.URL.Query().Get("id")
 	id, err := strconv.ParseInt(idParam, 10, 64)
@@ -51,7 +44,6 @@ func (s *Server) handleGetBannerById(writer http.ResponseWriter, request *http.R
 		http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
-	//requestError(writer, err, http.StatusInternalServerError)
 
 	data, err := json.Marshal(item)
 	if err != nil {
@@ -59,11 +51,8 @@ func (s *Server) handleGetBannerById(writer http.ResponseWriter, request *http.R
 		http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
-	//requestError(writer, err, http.StatusInternalServerError)
-
 	jsonResponse(writer, data)
 }
-
 func (s *Server) handleSaveBanner(writer http.ResponseWriter, request *http.Request) {
 	idParam := request.URL.Query().Get("id")
 	id, err := strconv.ParseInt(idParam, 10, 64)
@@ -91,7 +80,6 @@ func (s *Server) handleSaveBanner(writer http.ResponseWriter, request *http.Requ
 	}
 	jsonResponse(writer, data)
 }
-
 func (s *Server) handleRemoveById(writer http.ResponseWriter, request *http.Request) {
 	idParam := request.URL.Query().Get("id")
 	id, err := strconv.ParseInt(idParam, 10, 64)
@@ -105,7 +93,6 @@ func (s *Server) handleRemoveById(writer http.ResponseWriter, request *http.Requ
 
 	jsonResponse(writer, data)
 }
-
 func jsonResponse(writer http.ResponseWriter, data []byte) {
 	writer.Header().Set("Content-Type", "application/json")
 	_, err := writer.Write(data)
@@ -113,7 +100,6 @@ func jsonResponse(writer http.ResponseWriter, data []byte) {
 		log.Println("Error write response: ", err)
 	}
 }
-
 func requestError(writer http.ResponseWriter, err error, status int) {
 	if err != nil {
 		log.Println(err)
