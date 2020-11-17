@@ -2,121 +2,229 @@ package app
 
 import (
 	"encoding/json"
-	"github.com/bdaler/http/pkg/banners"
 	"log"
 	"net/http"
 	"strconv"
+
+	"github.com/Firdavs2002/http/pkg/banners"
 )
 
+// Server представляет собой логический сервер нашего приложения.
 type Server struct {
 	mux        *http.ServeMux
 	bannersSvc *banners.Service
 }
 
-//NewServer construct
+// NewServer - функция-конструктор для создания сервера.
 func NewServer(mux *http.ServeMux, bannersSvc *banners.Service) *Server {
-	return &Server{mux: mux, bannersSvc: bannersSvc}
+	return &Server{
+		mux:        mux,
+		bannersSvc: bannersSvc,
+	}
 }
 
 func (s *Server) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	s.mux.ServeHTTP(writer, request)
 }
 
+// Init инициализация сервра (регистрирует все Handler'ы)
 func (s *Server) Init() {
 	s.mux.HandleFunc("/banners.getAll", s.handleGetAllBanners)
-	s.mux.HandleFunc("/banners.getById", s.handleGetBannerById)
+	s.mux.HandleFunc("/banners.getById", s.handleGetBannerByID)
 	s.mux.HandleFunc("/banners.save", s.handleSaveBanner)
-	s.mux.HandleFunc("/banners.removeById", s.handleRemoveById)
+	s.mux.HandleFunc("/banners.removeById", s.handleRemoveByID)
 }
 
-func (s *Server) handleGetAllBanners(writer http.ResponseWriter, request *http.Request) {
-	items, err := s.bannersSvc.All(request.Context())
-	errInternalServerError(writer, err)
+func (s *Server) handleGetAllBanners(w http.ResponseWriter, r *http.Request) {
 
-	data, err := json.Marshal(items)
-	errInternalServerError(writer, err)
+	//берем все баннеры из сервиса
+	banners, err := s.bannersSvc.All(r.Context())
 
-	writer.Header().Set("Content-Type", "application/json")
-	_, err = writer.Write(data)
+	//если получили какую нибуд ошибку то отвечаем с ошибкой
 	if err != nil {
-		log.Println("Error write response: ", err)
+		//печатаем ошибку
+		log.Print(err)
+		//вызываем фукцию для ответа с ошибкой
+		errorWriter(w, http.StatusInternalServerError)
+		return
 	}
-}
 
-func (s *Server) handleGetBannerById(writer http.ResponseWriter, request *http.Request) {
-	idParam := request.URL.Query().Get("id")
-	id, err := strconv.ParseInt(idParam, 10, 64)
-	errBadRequest(writer, err)
+	//преобразуем данные в JSON
+	data, err := json.Marshal(banners)
 
-	item, err := s.bannersSvc.ByID(request.Context(), id)
-	errInternalServerError(writer, err)
-
-	data, err := json.Marshal(item)
-	errInternalServerError(writer, err)
-
-	writer.Header().Set("Content-Type", "application/json")
-	_, err = writer.Write(data)
+	//если получили ошибку то отвечаем с ошибкой
 	if err != nil {
-		log.Println("Error write response: ", err)
+		//печатаем ошибку
+		log.Print(err)
+		//вызываем фукцию для ответа с ошибкой
+		errorWriter(w, http.StatusInternalServerError)
+		return
 	}
+
+	//вызываем функцию для ответа в формате JSON
+	sendJSON(w, data)
+
 }
 
-func (s *Server) handleSaveBanner(writer http.ResponseWriter, request *http.Request) {
-	idParam := request.URL.Query().Get("id")
-	id, err := strconv.ParseInt(idParam, 10, 64)
-	errBadRequest(writer, err)
+func (s *Server) handleGetBannerByID(w http.ResponseWriter, r *http.Request) {
+	//получаем ID из параметра запроса
+	idP := r.URL.Query().Get("id")
 
-	banner := &banners.Banner{
+	// переобразуем его в число
+	id, err := strconv.ParseInt(idP, 10, 64)
+	//если получили ошибку то отвечаем с ошибкой
+	if err != nil {
+		//печатаем ошибку
+		log.Print(err)
+		//вызываем фукцию для ответа с ошибкой
+		errorWriter(w, http.StatusBadRequest)
+		return
+	}
+
+	//получаем баннер из сервиса
+	banner, err := s.bannersSvc.ByID(r.Context(), id)
+
+	//если получили ошибку то отвечаем с ошибкой
+	if err != nil {
+		//печатаем ошибку
+		log.Print(err)
+		//вызываем фукцию для ответа с ошибкой
+		errorWriter(w, http.StatusInternalServerError)
+		return
+	}
+
+	//преобразуем данные в JSON
+	data, err := json.Marshal(banner)
+
+	//если получили ошибку то отвечаем с ошибкой
+	if err != nil {
+		//печатаем ошибку
+		log.Print(err)
+		//вызываем фукцию для ответа с ошибкой
+		errorWriter(w, http.StatusInternalServerError)
+		return
+	}
+
+	//вызываем функцию для ответа в формате JSON
+	sendJSON(w, data)
+}
+
+func (s *Server) handleSaveBanner(w http.ResponseWriter, r *http.Request) {
+
+	//получаем данные из параметра запроса
+	idP := r.URL.Query().Get("id")
+	title := r.URL.Query().Get("title")
+	content := r.URL.Query().Get("content")
+	button := r.URL.Query().Get("button")
+	link := r.URL.Query().Get("link")
+
+	id, err := strconv.ParseInt(idP, 10, 64)
+	//если получили ошибку то отвечаем с ошибкой
+	if err != nil {
+		//печатаем ошибку
+		log.Print(err)
+		//вызываем фукцию для ответа с ошибкой
+		errorWriter(w, http.StatusBadRequest)
+		return
+	}
+	//Здесь опционалная проверка то что если все данные приходит пустыми то вернем ошибку
+	if title == "" && content == "" && button == "" && link == "" {
+		//печатаем ошибку
+		log.Print(err)
+		//вызываем фукцию для ответа с ошибкой
+		errorWriter(w, http.StatusBadRequest)
+		return
+	}
+
+	//создаём указател на структуру баннера
+	item := &banners.Banner{
 		ID:      id,
-		Title:   request.URL.Query().Get("title"),
-		Content: request.URL.Query().Get("content"),
-		Button:  request.URL.Query().Get("button"),
-		Link:    request.URL.Query().Get("link"),
+		Title:   title,
+		Content: content,
+		Button:  button,
+		Link:    link,
 	}
 
-	item, err := s.bannersSvc.Save(request.Context(), banner)
-	errInternalServerError(writer, err)
+	//вызываем метод Save тоест сохраняем или обновляем его
+	banner, err := s.bannersSvc.Save(r.Context(), item)
 
-	data, err := json.Marshal(item)
-	errInternalServerError(writer, err)
-
-	writer.Header().Set("Content-Type", "application/json")
-	_, err = writer.Write(data)
+	//если получили ошибку то отвечаем с ошибкой
 	if err != nil {
-		log.Println("Error write response: ", err)
-	}
-}
-
-func (s *Server) handleRemoveById(writer http.ResponseWriter, request *http.Request) {
-	idParam := request.URL.Query().Get("id")
-	id, err := strconv.ParseInt(idParam, 10, 64)
-	errBadRequest(writer, err)
-
-	item, err := s.bannersSvc.RemoveByID(request.Context(), id)
-	errInternalServerError(writer, err)
-
-	data, err := json.Marshal(item)
-	errInternalServerError(writer, err)
-
-	writer.Header().Set("Content-Type", "application/json")
-	_, err = writer.Write(data)
-	if err != nil {
-		log.Println("Error write response: ", err)
-	}
-}
-
-func errBadRequest(writer http.ResponseWriter, err error) {
-	if err != nil {
-		log.Println(err)
-		http.Error(writer, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		//печатаем ошибку
+		log.Print(err)
+		//вызываем фукцию для ответа с ошибкой
+		errorWriter(w, http.StatusInternalServerError)
 		return
 	}
+
+	//преобразуем данные в JSON
+	data, err := json.Marshal(banner)
+
+	//если получили ошибку то отвечаем с ошибкой
+	if err != nil {
+		//печатаем ошибку
+		log.Print(err)
+		//вызываем фукцию для ответа с ошибкой
+		errorWriter(w, http.StatusInternalServerError)
+		return
+	}
+	//вызываем функцию для ответа в формате JSON
+	sendJSON(w, data)
 }
 
-func errInternalServerError(writer http.ResponseWriter, err error) {
+func (s *Server) handleRemoveByID(w http.ResponseWriter, r *http.Request) {
+
+	//извлекаем из параметра запроса ID
+	idP := r.URL.Query().Get("id")
+
+	id, err := strconv.ParseInt(idP, 10, 64)
+	//если получили ошибку то отвечаем с ошибкой
 	if err != nil {
-		log.Println(err)
-		http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+
+		//печатаем ошибку
+		log.Print(err)
+
+		//вызываем фукцию для ответа с ошибкой
+		errorWriter(w, http.StatusBadRequest)
 		return
+	}
+
+	banner, err := s.bannersSvc.RemoveByID(r.Context(), id)
+	//если получили ошибку то отвечаем с ошибкой
+	if err != nil {
+		//печатаем ошибку
+		log.Print(err)
+		//вызываем фукцию для ответа с ошибкой
+		errorWriter(w, http.StatusInternalServerError)
+		return
+	}
+
+	//преобразуем данные в JSON
+	data, err := json.Marshal(banner)
+
+	//если получили ошибку то отвечаем с ошибкой
+	if err != nil {
+		//печатаем ошибку
+		log.Print(err)
+		//вызываем фукцию для ответа с ошибкой
+		errorWriter(w, http.StatusInternalServerError)
+		return
+	}
+	//вызываем функцию для ответа в формате JSON
+	sendJSON(w, data)
+}
+
+//это фукция для записывание ошибки в responseWriter или просто для ответа с ошиками
+func errorWriter(w http.ResponseWriter, httpSts int) {
+	http.Error(w, http.StatusText(httpSts), httpSts)
+}
+
+//это функция для ответа в формате JSON
+func sendJSON(w http.ResponseWriter, data []byte) {
+	w.Header().Set("Content-Type", "application/json")
+	_, err := w.Write(data)
+	if err != nil {
+		//печатаем ошибку
+		log.Print(err)
 	}
 }
