@@ -1,5 +1,5 @@
 CREATE TABLE banners (
-	id BIGSERIAL primary KEY,
+	id BIGSERIAL PRIMARY KEY,
 	title TEXT NOT NULL,
 	content TEXT NOT NULL,
 	button TEXT NOT NULL,
