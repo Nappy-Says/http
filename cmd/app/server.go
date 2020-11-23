@@ -2,7 +2,7 @@ package app
 
 import (
 	"encoding/json"
-	"github.com/bdaler/http/pkg/banners"
+	"github.com/Nappy-Says/http/pkg/banners"
 	"log"
 	"net/http"
 	"strconv"
