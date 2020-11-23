@@ -1,3 +1,3 @@
-module github.com/bdaler/http
+module github.com/Nappy-Says/http
 
 go 1.15
