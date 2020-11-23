@@ -1,1 +1,1 @@
-SELECT id, title, content, button, link, image, created FROM banners;
+SELECT id, title, content, button, link, image, created FROM banners

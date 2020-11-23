@@ -94,6 +94,7 @@ func (s *Server) handleSaveBanner(writer http.ResponseWriter, request *http.Requ
 	image, header, err := request.FormFile("image")
 	if err == nil {
 		var name = strings.Split(header.Filename, ".")
+		//banner.Image = name[len(name)-1]
 		banner.Image = name[1]
 	}
 
