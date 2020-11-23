@@ -21,7 +21,9 @@ func main() {
 
 func execute(server, port string) (err error) {
 	mux := http.NewServeMux()
-	bannersSvc := banners.NewService()
+	
+bannersSvc := banners.NewService()
+
 	serverHandler := app.NewServer(mux, bannersSvc)
 	serverHandler.Init()
 

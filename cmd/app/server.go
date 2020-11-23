@@ -2,7 +2,7 @@ package app
 
 import (
 	"encoding/json"
-	"github.com/Nappy-Says/http/pkg/banners"
+	"github.com/bdaler/http/pkg/banners"
 	"log"
 	"net/http"
 	"strconv"
@@ -13,7 +13,6 @@ type Server struct {
 	mux        *http.ServeMux
 	bannersSvc *banners.Service
 }
-
 func NewServer(mux *http.ServeMux, bannersSvc *banners.Service) *Server {
 	return &Server{mux: mux, bannersSvc: bannersSvc}
 }
@@ -21,7 +20,6 @@ func NewServer(mux *http.ServeMux, bannersSvc *banners.Service) *Server {
 func (s *Server) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	s.mux.ServeHTTP(writer, request)
 }
-
 func (s *Server) Init() {
 	log.Println("Init method")
 	s.mux.HandleFunc("/banners.getAll", s.handleGetAllBanners)
@@ -37,14 +35,12 @@ func (s *Server) handleGetAllBanners(writer http.ResponseWriter, request *http.R
 		http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
-
 	data, err := json.Marshal(items)
 	if err != nil {
 		log.Println(err)
 		http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
-
 	jsonResponse(writer, data)
 }
 
@@ -94,7 +90,7 @@ func (s *Server) handleSaveBanner(writer http.ResponseWriter, request *http.Requ
 	image, header, err := request.FormFile("image")
 	if err == nil {
 		var name = strings.Split(header.Filename, ".")
-		//banner.Image = name[len(name)-1]
+		//banner
 		banner.Image = name[1]
 	}
 
@@ -120,6 +116,7 @@ func (s *Server) handleRemoveById(writer http.ResponseWriter, request *http.Requ
 	id, err := strconv.ParseInt(idParam, 10, 64)
 	if err != nil {
 		log.Println(err)
+
 		http.Error(writer, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}

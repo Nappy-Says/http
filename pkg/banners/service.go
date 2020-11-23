@@ -27,6 +27,8 @@ type Service struct {
 	items []*Banner
 }
 
+//NewService construct
+
 func NewService() *Service {
 	return &Service{items: make([]*Banner, 0)}
 }
