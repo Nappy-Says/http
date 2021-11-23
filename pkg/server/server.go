@@ -1,34 +1,35 @@
 package server
 
 import (
+	"bytes"
+	"errors"
 	"io"
 	"log"
 	"net"
 	"strconv"
+	"strings"
 	"sync"
 )
 
 type HandleFunc func(conn net.Conn)
 
 type Server struct {
-	addr 	string
-	mu 			sync.Mutex
-	handlers 	map[string]HandleFunc
+	addr     string
+	mu       sync.Mutex
+	handlers map[string]HandleFunc
 }
 
 var rn = "\r\n"
 
-
 func HeaderShortcut(body string) []byte {
 	return []byte(
-		"HTTP/1.1 200 OK" + rn + 
-			"Content-Length:" + strconv.Itoa(len(body)) + rn + 
+		"HTTP/1.1 200 OK" + rn +
+			"Content-Length:" + strconv.Itoa(len(body)) + rn +
 			"Content-Type:text/html" + rn +
 			"Connection:close" + rn + rn +
 			string(body),
 	)
 }
-
 
 func NewServer(addr string) *Server {
 	return &Server{addr: addr, handlers: make(map[string]HandleFunc)}
@@ -48,7 +49,7 @@ func (s *Server) Start() error {
 		return err
 	}
 
-	defer func()  {
+	defer func() {
 		if cerr := listener.Close(); cerr != nil {
 			if err == nil {
 				err = cerr
@@ -56,7 +57,7 @@ func (s *Server) Start() error {
 			}
 			log.Println(cerr)
 		}
-	} ()
+	}()
 
 	log.Println("start")
 
@@ -67,17 +68,12 @@ func (s *Server) Start() error {
 			continue
 		}
 
-		err = handle(conn)
-		if err != nil {
-			log.Println(err)
-			continue
-		}
+		go s.handle(conn)
 	}
 }
 
 
-
-func handle(conn net.Conn) (err error) {
+func (s *Server) handle(conn net.Conn) (err error) {
 	defer func() {
 		if cerr := conn.Close(); cerr != nil {
 			if err == nil {
@@ -86,22 +82,47 @@ func handle(conn net.Conn) (err error) {
 			}
 			log.Println(err)
 		}
-	} ()
-
+	}()
 
 	buf := make([]byte, 4096)
+	n, err := conn.Read(buf)
 
-	for {
-		n, err := conn.Read(buf)
-
-		log.Println(" >>>>> NEW CONNECTION <<<<< BYTES => ", n)
-		
-		if err != io.EOF {
-			log.Printf("%s", buf[:n])
-			return nil
-		}
-		if err != nil {
-			return err
-		}
+	log.Println(" >>>>> NEW CONNECTION <<<<< BYTES => ", n)
+	
+	// Recive header data from client
+	if err != io.EOF {
+		log.Printf("%s", buf[:n])
 	}
+	if err != nil {
+		return err
+	}
+
+
+	// Set header data
+	data := buf[:n]
+	reqiestLineDelim := []byte(rn)
+	reqiestLineEnd := bytes.Index(data, reqiestLineDelim)
+	
+	if reqiestLineEnd == -1 {
+		return errors.New("Connection is broken")
+	}
+
+	requserLine := string(data[:reqiestLineEnd])
+	parts := strings.Split(requserLine, " ")
+	
+	if (len(parts) != 3 ) {
+		return errors.New("Connection is broken")
+	}
+
+	route := s.handlers[parts[1]]
+
+	// return 
+	if route != nil {
+		for pathPresent, handler := range s.handlers {
+			if pathPresent == parts[1] {
+				handler(conn)
+		}
+	}}
+
+	return nil
 }
