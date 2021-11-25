@@ -144,10 +144,11 @@ func (s *Server) handle(conn net.Conn) (err error) {
 	headersMap := make(map[string]string)
 	for scanner.Scan() {
 		t := scanner.Text()
-		headersMap[t[:strings.Index(t, ":")]] = t[strings.Index(t, " "):]
+		headersMap[t[:strings.Index(t, ":")]] = t[strings.Index(t, " ")+1:]
 	}
-	req.Headers = headersMap
 
+	log.Println(headersMap)
+	req.Headers = headersMap
 
 
 	// PARSE URL REQUEST
