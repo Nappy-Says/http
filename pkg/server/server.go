@@ -103,12 +103,13 @@ func (s *Server) handle(conn net.Conn) (err error) {
 	n, err := conn.Read(buf)
 
 	if err != io.EOF {
-		// log.Printf("%s", buf[:n])
+		log.Printf("%s", buf[:n])
 	}
 	if err != nil {
 		return err
 	}
 	// --
+
 
 	// PARSE PATH, BROWSER VERSION
 	// * re   -- request line
@@ -137,19 +138,27 @@ func (s *Server) handle(conn net.Conn) (err error) {
 	}
 	// --
 
+
 	// SAVE HEADER
-	ss := string(data[rle+2:bytes.Index(data, []byte(rn+rn))])
-	scanner := bufio.NewScanner(strings.NewReader(ss))
-	
+	// 
+	headerData := string(data[rle+2:bytes.Index(data, []byte(rn+rn))])
+	scanner := bufio.NewScanner(strings.NewReader(headerData))
+
 	headersMap := make(map[string]string)
 	for scanner.Scan() {
 		t := scanner.Text()
 		headersMap[t[:strings.Index(t, ":")]] = t[strings.Index(t, " ")+1:]
 	}
 
-	log.Println(headersMap)
+	// log.Println(headersMap)
 	req.Headers = headersMap
+	// --
 
+
+	// SAVE BODY
+	bodyData := data[bytes.Index(data, []byte(rn+rn))+4:]
+	req.Body = bodyData
+	log.Println(req.Body, bodyData)
 
 	// PARSE URL REQUEST
 	// Decode symbols not range on ascii table
