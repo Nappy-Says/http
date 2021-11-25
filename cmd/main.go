@@ -36,12 +36,5 @@ func execute(host string, port string) (err error) {
 			log.Println(id)
 		},
 	)
-
-	// 	if err != nil {
-	// 		log.Println(err)
-	// 	}
-	// })
-
-
 	return srv.Start()
 }

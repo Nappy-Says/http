@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bufio"
 	"bytes"
 	"errors"
 	"io"
@@ -13,16 +14,20 @@ import (
 )
 
 var rn = "\r\n"
+var errConnectionBroken = errors.New("connection is broken")
+var errHttpSupport = errors.New("your browser can't support HTTP version 1.1")
 
 type HandleFunc func(req *Request)
 
 // type RequestFunc func(req Request)
 type Request struct {
-	Conn 		net.Conn
-	PathParams 	map[string]string
-	QueryParams	url.Values
-}
+	Conn        net.Conn
+	QueryParams url.Values
 
+	Body       []byte
+	Headers    map[string]string
+	PathParams map[string]string
+}
 
 type Server struct {
 	addr     string
@@ -30,13 +35,9 @@ type Server struct {
 	handlers map[string]HandleFunc
 }
 
-
-
-
 func NewServer(addr string) *Server {
 	return &Server{addr: addr, handlers: make(map[string]HandleFunc)}
 }
-
 
 func HeaderShortcut(body string) []byte {
 	return []byte(
@@ -48,14 +49,11 @@ func HeaderShortcut(body string) []byte {
 	)
 }
 
-
 func (s *Server) Register(path string, handler HandleFunc) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.handlers[path] = handler
 }
-
-
 
 func (s *Server) Start() error {
 	listener, err := net.Listen("tcp", s.addr)
@@ -87,7 +85,6 @@ func (s *Server) Start() error {
 	}
 }
 
-
 func (s *Server) handle(conn net.Conn) (err error) {
 	defer func() {
 		if cerr := conn.Close(); cerr != nil {
@@ -99,44 +96,63 @@ func (s *Server) handle(conn net.Conn) (err error) {
 		}
 	}()
 
-
+	// GET DATA
 	log.Println("=========| handle(): New Connection |=========")
 	var req Request
 	buf := make([]byte, 4096)
 	n, err := conn.Read(buf)
 
-	// Recive header data from client
 	if err != io.EOF {
-		log.Printf("%s", buf[:n])
+		// log.Printf("%s", buf[:n])
 	}
 	if err != nil {
 		return err
 	}
+	// --
 
-	// Set header data
-	// * rld  -- request line delim
+	// PARSE PATH, BROWSER VERSION
+	// * re   -- request line
 	// * rle  -- request line end
+	// * rld  -- request line delim
 	data := buf[:n]
+
 	rld := []byte(rn)
 	rle := bytes.Index(data, rld)
 
 	if rle == -1 {
-		return errors.New("Connection is broken")
+		return errConnectionBroken
 	}
 
-	requserLine := string(data[:rle])
-	parts := strings.Split(requserLine, " ")
+	rl := string(data[:rle])
+	parts := strings.Split(rl, " ")
 
-	if (len(parts) != 3) {
-		return errors.New("Connection is broken")
+	if len(parts) != 3 {
+		return errConnectionBroken
 	}
 
-	if parts[2] != "HTTP/1.1" {
-		return errors.New("Your browser can't support HTTP version 1.1")
+	path, version := parts[1], parts[2]
+
+	if version != "HTTP/1.1" {
+		return errHttpSupport
 	}
+	// --
+
+	// SAVE HEADER
+	ss := string(data[rle+2:bytes.Index(data, []byte(rn+rn))])
+	scanner := bufio.NewScanner(strings.NewReader(ss))
+	
+	headersMap := make(map[string]string)
+	for scanner.Scan() {
+		t := scanner.Text()
+		headersMap[t[:strings.Index(t, ":")]] = t[strings.Index(t, " "):]
+	}
+	req.Headers = headersMap
 
 
-	decoded, _ := url.PathUnescape(parts[1])
+
+	// PARSE URL REQUEST
+	// Decode symbols not range on ascii table
+	decoded, _ := url.PathUnescape(path)
 	if err != nil {
 		log.Print(err)
 		return
@@ -148,15 +164,10 @@ func (s *Server) handle(conn net.Conn) (err error) {
 		return
 	}
 
-	log.Print(url.Path)
-	log.Print(url.Query())
-
 	req.Conn = conn
 	req.QueryParams = url.Query()
 
-	handler := func(req *Request) {
-		req.Conn.Close()
-	}
+	handler := func(req *Request) { req.Conn.Close() }
 
 	s.mu.Lock()
 	pathParam, hFunc := s.FindRoute(url.Path)
@@ -172,9 +183,7 @@ func (s *Server) handle(conn net.Conn) (err error) {
 	return nil
 }
 
-
-
-// 
+//
 func (s *Server) FindRoute(path string) (map[string]string, HandleFunc) {
 	tempIndx := 0
 	mapOFparams := make(map[string]string)
@@ -192,15 +201,14 @@ func (s *Server) FindRoute(path string) (map[string]string, HandleFunc) {
 		serverParts := strings.Split(tempRoute, "/")
 
 		log.Println(serverParts) // []string
-		log.Println(cliParts) 	// []string
+		log.Println(cliParts)    // []string
 
-		for i, j:= range serverParts {
+		for i, j := range serverParts {
 			if j != "" {
 				fIndx := j[0:1]
 				lIndx := j[len(j)-1:]
 
-				if 
-				fIndx == "{" && lIndx == "}" {
+				if fIndx == "{" && lIndx == "}" {
 					mapOFparams[j[1:len(j)-1]] = cliParts[i]
 					flag = true
 
@@ -219,7 +227,8 @@ func (s *Server) FindRoute(path string) (map[string]string, HandleFunc) {
 					}
 				}
 				flag = true
-		}}
+			}
+		}
 
 		if flag {
 			if function, status := s.handlers[tempRoute]; status {

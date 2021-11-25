@@ -4,3 +4,7 @@
 
 
 GET http://localhost:9999/payments/19898999  HTTP/1.1
+
+
+
+GET http://localhost:9999/payments19898999  HTTP/1.1
