@@ -29,7 +29,7 @@ func (s *Server) Init()  {
 	s.mux.HandleFunc("/banners.save",		s.handleSaveBanner)
 	s.mux.HandleFunc("/banners.getAll", 	s.handleGetAllBanners)
 	s.mux.HandleFunc("/banners.getByID", 	s.handleGetBannerByID)
-	s.mux.HandleFunc("/banners.removeByID", s.handleRemoveBannersByID)
+	s.mux.HandleFunc("/banners.removeByID", s.handleRemoveBannerByID)
 }
 
 
@@ -136,7 +136,7 @@ func (s *Server) handleSaveBanner(write http.ResponseWriter, request *http.Reque
 	}
 }
 
-func (s *Server) handleRemoveByID(write http.ResponseWriter, request *http.Request) {
+func (s *Server) handleRemoveBannerByID(write http.ResponseWriter, request *http.Request) {
 	idParam := request.URL.Query().Get("id")
 
 	id, err := strconv.ParseInt(idParam, 10, 64)
