@@ -28,8 +28,8 @@ func (s *Server) ServeHTTP(write http.ResponseWriter, request *http.Request)  {
 func (s *Server) Init()  {
 	s.mux.HandleFunc("/banners.save",		s.handleSaveBanner)
 	s.mux.HandleFunc("/banners.getAll", 	s.handleGetAllBanners)
-	s.mux.HandleFunc("/banners.getByID", 	s.handleGetBannerByID)
-	s.mux.HandleFunc("/banners.removeByID", s.handleRemoveBannerByID)
+	s.mux.HandleFunc("/banners.getById", 	s.handleGetBannerByID)
+	s.mux.HandleFunc("/banners.removeById", s.handleRemoveBannerByID)
 }
 
 
