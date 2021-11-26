@@ -6,8 +6,6 @@ import (
 )
 
 
-
-
 type Service struct {
 	mu 		sync.RWMutex
 	items 	[]*Banner
@@ -31,7 +29,10 @@ func NewService() *Service  {
 
 
 func (s *Service) All(ctx context.Context) ([]*Banner, error) {
-	panic(panicNotEmplemented)	
+	// s.mu.RLock()
+	// defer s.mu.RUnlock()
+
+	return s.items , nil	
 }
 
 
