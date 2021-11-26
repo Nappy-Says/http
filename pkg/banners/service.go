@@ -53,7 +53,7 @@ func (s *Service) ByID(ctx context.Context, id int64) (*Banner, error) {
 
 
 func (s *Service) Save(ctx context.Context, item *Banner) (*Banner, error) {
-	if item == nil {
+	if item.ID == 0 {
 		tempBannerID++
 
 		createdBanner := &Banner{
