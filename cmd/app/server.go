@@ -93,13 +93,16 @@ func (s *Server) handleGetBannerByID(write http.ResponseWriter, request *http.Re
 }
 
 func (s *Server) handleSaveBanner(write http.ResponseWriter, request *http.Request) {
-	idParam := request.URL.Query().Get("id")
-	linkParam := request.URL.Query().Get("link")
-	titleParam := request.URL.Query().Get("title")
-	buttonParam := request.URL.Query().Get("button")
-	contentParam := request.URL.Query().Get("content")
+	idParam := request.FormValue("id")
+	linkParam := request.FormValue("link")
+	titleParam := request.FormValue("title")
+	buttonParam := request.FormValue("button")
+	contentParam := request.FormValue("content")
 
+	log.Println(idParam)
 	id, err := strconv.ParseInt(idParam, 10, 64)
+
+
 	if err != nil {
 		log.Print(err)
 		http.Error(write, http.StatusText(400), 400)
