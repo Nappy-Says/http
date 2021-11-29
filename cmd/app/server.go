@@ -99,9 +99,7 @@ func (s *Server) handleSaveBanner(write http.ResponseWriter, request *http.Reque
 	buttonParam := request.FormValue("button")
 	contentParam := request.FormValue("content")
 
-	log.Println(idParam)
 	id, err := strconv.ParseInt(idParam, 10, 64)
-
 
 	if err != nil {
 		log.Print(err)
