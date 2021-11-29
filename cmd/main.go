@@ -19,7 +19,6 @@ func main() {
 	}
 }
 
-
 func execute(host string, port string) (err error) {
 	mux := http.NewServeMux()
 	bannersSvc := banners.NewService()

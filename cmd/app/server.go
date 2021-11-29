@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/Nappy-Says/http/pkg/banners"
 )
@@ -113,7 +114,12 @@ func (s *Server) handleSaveBanner(write http.ResponseWriter, request *http.Reque
 		Content: contentParam,
 	}
 
-	banners, err := s.bannersSvc.Save(request.Context(), &banner)
+	file, header, err := request.FormFile("image")
+	if err == nil {
+		banner.Image = strings.Split(header.Filename, ".")[len(strings.Split(header.Filename, "."))-1]
+	}
+
+	banners, err := s.bannersSvc.Save(request.Context(), &banner, file)
 	if err != nil {
 		log.Print(err)
 		http.Error(write, http.StatusText(500), 500)

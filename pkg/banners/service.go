@@ -3,14 +3,18 @@ package banners
 import (
 	"context"
 	"errors"
+	"fmt"
+	"io/ioutil"
 	"log"
+	"mime/multipart"
+	"os"
 	"sync"
 )
 
 var tempBannerID int64
 // var panicNotEmplemented = "not emplemented"
 var errorBannerNotFound = errors.New("banner not found")
-
+var errorReadFile = errors.New("an error occurred while reading the file")
 
 type Service struct {
 	mu 		sync.RWMutex
@@ -19,10 +23,11 @@ type Service struct {
 
 type Banner struct {
 	ID 		int64
-	Title 	string
-	Content string
-	Button 	string
 	Link	string
+	Image	string
+	Title 	string
+	Button 	string
+	Content string
 }
 
 func NewService() *Service  {
@@ -52,38 +57,111 @@ func (s *Service) ByID(ctx context.Context, id int64) (*Banner, error) {
 }
 
 
-func (s *Service) Save(ctx context.Context, item *Banner) (*Banner, error) {
+// func (s *Service) Save(ctx context.Context, item *Banner, file *multipart.File) (*Banner, error) {
+func (s *Service) Save(ctx context.Context, item *Banner, file multipart.File) (*Banner, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	
 	if item.ID == 0 {
 		tempBannerID++
+		item.ID = tempBannerID
 
-		createdBanner := &Banner{
-			Link:    item.Link,
-			Title:   item.Title,
-			Button:  item.Button,
-			Content: item.Content,
-			ID:      tempBannerID,
+		if item.Image != "" {
+			item.Image = fmt.Sprint(item.ID) + "." + item.Image
+
+			img, err := ioutil.ReadAll(file)
+			if err != nil {
+				return nil, errorReadFile
+			}
+
+			err = ioutil.WriteFile("./static/banners/img/" + item.Image, img, os.ModePerm)
+			if err != nil {
+				return nil, err
+			}
 		}
 
-		s.items = append(s.items, createdBanner)
-
-		return createdBanner, nil
+		s.items = append(s.items, item)
+		return item, nil
 	}
 
-	banner, err := s.ByID(ctx, item.ID)
+	for i, j := range s.items {
+		if j.ID == item.ID {
+			// if item.Image != nil {
+			if item.Image != "" {
+				item.Image = fmt.Sprint(item.ID) + "." + item.Image
 
-	if err != nil {
-		log.Print(err)
-		return nil, errorBannerNotFound
+				data, err := ioutil.ReadAll(file)
+				if err != nil {
+					return nil, errorReadFile
+				}
+
+				err = ioutil.WriteFile("./static/banners/img/" + item.Image, data, os.ModePerm)
+				if err != nil {
+					return nil, err
+				}
+
+			} else {
+				item.Image = s.items[i].Image
+			}
+
+			s.items[i] = item
+			return item, nil
+		}
 	}
 
-	banner.Link = item.Link
-	banner.Title = item.Title
-	banner.Button = item.Button
-	banner.Content = item.Content
-
-	return banner, nil
-
+	return nil, errorBannerNotFound
 }
+
+// func (s *Service) Save(ctx context.Context, item *Banner, file multipart.File) (*Banner, error) {
+
+// 	// check if id is equal to 0
+// 	if item.ID == 0 {
+// 		newID++
+// 		item.ID = newID
+// 		if item.Image != "" {
+// 			item.Image = fmt.Sprint(item.ID) + "." + item.Image
+
+// 			data, err := ioutil.ReadAll(file)
+// 			if err != nil {
+// 				return nil, errors.New("not readible data")
+// 			}
+
+// 			err = ioutil.WriteFile("./web/banners/"+item.Image, data, 0666)
+// 			if err != nil {
+// 				return nil, err
+// 			}
+// 		}
+
+// 		s.items = append(s.items, item)
+// 		return item, nil
+// 	}
+
+// 	for k, v := range s.items {
+// 		if v.ID == item.ID {
+// 			if item.Image != "" {
+// 				item.Image = fmt.Sprint(item.ID) + "." + item.Image
+
+// 				data, err := ioutil.ReadAll(file)
+// 				if err != nil {
+// 					return nil, errors.New("not readible data")
+// 				}
+
+// 				err = ioutil.WriteFile("./web/banners/"+item.Image, data, 0666)
+// 				if err != nil {
+// 					return nil, err
+// 				}
+// 			} else {
+// 				item.Image = s.items[k].Image
+// 			}
+
+// 			s.items[k] = item
+// 			return item, nil
+// 		}
+// 	}
+
+// 	return nil, errors.New("item not found")
+// }
 
 
 func (s *Service) RemoveByID(ctx context.Context, id int64) (*Banner, error) {
