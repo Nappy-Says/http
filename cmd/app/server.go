@@ -55,7 +55,7 @@ func (s *Server) handleGetAllBanners(write http.ResponseWriter, request *http.Re
 	_, err = write.Write(data)
 	if err != nil {
 		log.Print(err)
-		http.Error(write, http.StatusText(403), 403)
+		// http.Error(write, http.StatusText(403), 403)
 	}
 }
 
@@ -88,7 +88,7 @@ func (s *Server) handleGetBannerByID(write http.ResponseWriter, request *http.Re
 	_, err = write.Write(data)
 	if err != nil {
 		log.Print(err)
-		http.Error(write, http.StatusText(403), 403)
+		// http.Error(write, http.StatusText(403), 403)
 	}
 }
 
@@ -148,7 +148,7 @@ func (s *Server) handleSaveBanner(write http.ResponseWriter, request *http.Reque
 	_, err = write.Write(data)
 	if err != nil {
 		log.Print(err)
-		http.Error(write, http.StatusText(403), 403)
+		// http.Error(write, http.StatusText(403), 403)
 	}
 }
 
@@ -181,6 +181,6 @@ func (s *Server) handleRemoveBannerByID(write http.ResponseWriter, request *http
 	_, err = write.Write(data)
 	if err != nil {
 		log.Print(err)
-		http.Error(write, http.StatusText(403), 403)
+		// http.Error(write, http.StatusText(403), 403)
 	}
 }
