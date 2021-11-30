@@ -28,7 +28,7 @@ func execute(host string, port string) (err error) {
 
 	srv := &http.Server{
 		Addr:    net.JoinHostPort(host, port),
-		Handler: server,
+		Handler: mux,
 	}
 
 	log.Print("========| execute(): Server start |========")
