@@ -75,7 +75,7 @@ func (s *Service) Save(ctx context.Context, item *Banner, file multipart.File) (
 				return nil, errorReadFile
 			}
 
-			err = ioutil.WriteFile("./web/banners/" + item.Image, img, os.ModePerm)
+			err = ioutil.WriteFile("./web/banners/" + item.Image, img, 0666)
 			if err != nil {
 				return nil, err
 			}
@@ -96,7 +96,7 @@ func (s *Service) Save(ctx context.Context, item *Banner, file multipart.File) (
 					return nil, errorReadFile
 				}
 
-				err = ioutil.WriteFile("./web/banners/" + item.Image, data, os.ModePerm)
+				err = ioutil.WriteFile("./web/banners/" + item.Image, data, 0666)
 				if err != nil {
 					return nil, err
 				}
