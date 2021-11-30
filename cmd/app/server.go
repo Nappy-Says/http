@@ -99,6 +99,12 @@ func (s *Server) handleSaveBanner(write http.ResponseWriter, request *http.Reque
 	buttonParam := request.PostFormValue("button")
 	contentParam := request.PostFormValue("content")
 
+	log.Println("idParam: ", idParam)
+	log.Println("linkParam: ", linkParam)
+	log.Println("titleParam: ", titleParam)
+	log.Println("buttonParam: ", buttonParam)
+	log.Println("contentParam: ", contentParam)
+
 	id, err := strconv.ParseInt(idParam, 10, 64)
 
 	if err != nil {

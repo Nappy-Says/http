@@ -113,57 +113,6 @@ func (s *Service) Save(ctx context.Context, item *Banner, file multipart.File) (
 	return nil, errorBannerNotFound
 }
 
-// func (s *Service) Save(ctx context.Context, item *Banner, file multipart.File) (*Banner, error) {
-
-// 	// check if id is equal to 0
-// 	if item.ID == 0 {
-// 		newID++
-// 		item.ID = newID
-// 		if item.Image != "" {
-// 			item.Image = fmt.Sprint(item.ID) + "." + item.Image
-
-// 			data, err := ioutil.ReadAll(file)
-// 			if err != nil {
-// 				return nil, errors.New("not readible data")
-// 			}
-
-// 			err = ioutil.WriteFile("./web/banners/"+item.Image, data, 0666)
-// 			if err != nil {
-// 				return nil, err
-// 			}
-// 		}
-
-// 		s.items = append(s.items, item)
-// 		return item, nil
-// 	}
-
-// 	for k, v := range s.items {
-// 		if v.ID == item.ID {
-// 			if item.Image != "" {
-// 				item.Image = fmt.Sprint(item.ID) + "." + item.Image
-
-// 				data, err := ioutil.ReadAll(file)
-// 				if err != nil {
-// 					return nil, errors.New("not readible data")
-// 				}
-
-// 				err = ioutil.WriteFile("./web/banners/"+item.Image, data, 0666)
-// 				if err != nil {
-// 					return nil, err
-// 				}
-// 			} else {
-// 				item.Image = s.items[k].Image
-// 			}
-
-// 			s.items[k] = item
-// 			return item, nil
-// 		}
-// 	}
-
-// 	return nil, errors.New("item not found")
-// }
-
-
 func (s *Service) RemoveByID(ctx context.Context, id int64) (*Banner, error) {
 	banner, err := s.ByID(ctx, id)
 	if err != nil {
