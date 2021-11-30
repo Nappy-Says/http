@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"log"
 	"mime/multipart"
-	"os"
 	"sync"
 )
 
