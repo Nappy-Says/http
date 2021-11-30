@@ -83,7 +83,7 @@ func (s *Server) handleGetBannerByID(write http.ResponseWriter, request *http.Re
 		return
 	}
 
-	write.Header().Set("Contetn-Type", "applicatrion/json")
+	write.Header().Set("Content-Type", "application/json")
 
 	_, err = write.Write(data)
 	if err != nil {
@@ -113,7 +113,7 @@ func (s *Server) handleSaveBanner(write http.ResponseWriter, request *http.Reque
 		return
 	}
 
-	banner := banners.Banner{
+	banner := &banners.Banner{
 		ID:      id,
 		Link:    linkParam,
 		Title:   titleParam,
@@ -129,7 +129,7 @@ func (s *Server) handleSaveBanner(write http.ResponseWriter, request *http.Reque
 		banner.Image = strings.Split(header.Filename, ".")[len(strings.Split(header.Filename, "."))-1]
 	}
 
-	banners, err := s.bannersSvc.Save(request.Context(), &banner, file)
+	banners, err := s.bannersSvc.Save(request.Context(), banner, file)
 	if err != nil {
 		log.Print(err)
 		http.Error(write, http.StatusText(500), 500)
@@ -143,7 +143,7 @@ func (s *Server) handleSaveBanner(write http.ResponseWriter, request *http.Reque
 		return
 	}
 
-	write.Header().Set("Contetn-Type", "applicatrion/json")
+	write.Header().Set("Content-Type", "application/json")
 
 	_, err = write.Write(data)
 	if err != nil {
@@ -176,7 +176,7 @@ func (s *Server) handleRemoveBannerByID(write http.ResponseWriter, request *http
 		return
 	}
 
-	write.Header().Set("Contetn-Type", "applicatrion/json")
+	write.Header().Set("Content-Type", "application/json")
 
 	_, err = write.Write(data)
 	if err != nil {
