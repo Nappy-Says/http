@@ -39,7 +39,11 @@ func (s *Service) All(ctx context.Context) ([]*Banner, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	return s.items, nil
+	if s.items != nil {
+		return s.items, nil
+	}
+
+	return nil, errorBannerNotFound
 }
 
 func (s *Service) ByID(ctx context.Context, id int64) (*Banner, error) {
