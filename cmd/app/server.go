@@ -43,6 +43,8 @@ func (s *Server) handleGetAllBanners(write http.ResponseWriter, request *http.Re
 		return
 	}
 
+	log.Println("ALL")
+
 	data, err := json.Marshal(banners)
 	if err != nil {
 		log.Print(err)
@@ -61,6 +63,8 @@ func (s *Server) handleGetAllBanners(write http.ResponseWriter, request *http.Re
 
 func (s *Server) handleGetBannerByID(write http.ResponseWriter, request *http.Request) {
 	idParam := request.URL.Query().Get("id")
+
+	log.Println("BY ID")
 
 	id, err := strconv.ParseInt(idParam, 10, 64)
 	if err != nil {
@@ -99,12 +103,6 @@ func (s *Server) handleSaveBanner(write http.ResponseWriter, request *http.Reque
 	buttonParam := request.PostFormValue("button")
 	contentParam := request.PostFormValue("content")
 
-	log.Println("idParam: ", idParam)
-	log.Println("linkParam: ", linkParam)
-	log.Println("titleParam: ", titleParam)
-	log.Println("buttonParam: ", buttonParam)
-	log.Println("contentParam: ", contentParam)
-
 	if titleParam == "" || contentParam == "" || buttonParam == "" || linkParam == "" {
 		// return http.Error(http.StatusText(400), 400)
 		return
@@ -127,8 +125,6 @@ func (s *Server) handleSaveBanner(write http.ResponseWriter, request *http.Reque
 	}
 
 	file, header, err := request.FormFile("image")
-
-	log.Println(file, header)
 
 	if err == nil {
 		banner.Image = strings.Split(header.Filename, ".")[len(strings.Split(header.Filename, "."))-1]
